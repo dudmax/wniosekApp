@@ -4,13 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,9 +41,6 @@ public class ApplicationServiceImplTest {
 
 	@Mock
 	private StateRepository stateRepository;
-
-	@Mock
-	private ApplicationChangeService applicationChangeService;
 
 	@Test
 	public void testGetApplications() {
@@ -134,7 +131,6 @@ public class ApplicationServiceImplTest {
 	}
 
 	@Test
-	@Disabled
 	public void testUpdateApplication() {
 		// Define test data and expectations
 		Long applicationId = 1L;
@@ -156,7 +152,7 @@ public class ApplicationServiceImplTest {
 		// Define test data and expectations
 		Long applicationId = 1L;
 		Application application = new Application();
-		application.setState(new State(StateEnum.VERIFIED));
+		application.setState(new State(StateEnum.ACCEPTED));
 
 		when(applicationRepository.findById(applicationId)).thenReturn(Optional.of(application));
 
@@ -170,21 +166,30 @@ public class ApplicationServiceImplTest {
 	}
 
 	@Test
-	@Disabled
 	public void testVerifyApplication() {
 		// Define test data and expectations
 		Long applicationId = 1L;
 		Application application = new Application();
+		application.setId(applicationId);
 		application.setTitle("TestTitle");
 		application.setDescription("TestDescription");
 		application.setState(new State(StateEnum.CREATED));
 		when(applicationRepository.findById(applicationId)).thenReturn(Optional.of(application));
+
+		State expectedState = new State(StateEnum.VERIFIED);
+		when(stateRepository.findById(StateEnum.VERIFIED.getId())).thenReturn(Optional.of(expectedState));
+		when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
+			Application savedApplication = invocation.getArgument(0);
+			savedApplication.setState(expectedState);
+			return savedApplication;
+		});
 
 
 		// Call the service method
 		ApplicationDTO result = applicationService.verifyApplication(applicationId);
 
 		// Assert the result
+		verify(applicationRepository).save(application);
 		assertEquals(StateEnum.VERIFIED.name(), result.getState());
 	}
 
@@ -207,19 +212,30 @@ public class ApplicationServiceImplTest {
 	}
 
 	@Test
-	@Disabled
 	public void testAcceptApplication() {
 		// Define test data and expectations
 		Long applicationId = 1L;
 		Application application = new Application();
+		application.setId(applicationId);
+		application.setTitle("TestTitle");
+		application.setDescription("TestDescription");
 		application.setState(new State(StateEnum.VERIFIED));
-
 		when(applicationRepository.findById(applicationId)).thenReturn(Optional.of(application));
+
+		State expectedState = new State(StateEnum.ACCEPTED);
+		when(stateRepository.findById(StateEnum.ACCEPTED.getId())).thenReturn(Optional.of(expectedState));
+		when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
+			Application savedApplication = invocation.getArgument(0);
+			savedApplication.setState(expectedState);
+			return savedApplication;
+		});
+
 
 		// Call the service method
 		ApplicationDTO result = applicationService.acceptApplication(applicationId);
 
 		// Assert the result
+		verify(applicationRepository).save(application);
 		assertEquals(StateEnum.ACCEPTED.name(), result.getState());
 	}
 
@@ -242,19 +258,29 @@ public class ApplicationServiceImplTest {
 	}
 
 	@Test
-	@Disabled
 	public void testPublishApplication() {
 		// Define test data and expectations
 		Long applicationId = 1L;
 		Application application = new Application();
+		application.setId(applicationId);
+		application.setTitle("TestTitle");
+		application.setDescription("TestDescription");
 		application.setState(new State(StateEnum.ACCEPTED));
-
 		when(applicationRepository.findById(applicationId)).thenReturn(Optional.of(application));
+
+		State expectedState = new State(StateEnum.PUBLISHED);
+		when(stateRepository.findById(StateEnum.PUBLISHED.getId())).thenReturn(Optional.of(expectedState));
+		when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
+			Application savedApplication = invocation.getArgument(0);
+			savedApplication.setState(expectedState);
+			return savedApplication;
+		});
 
 		// Call the service method
 		ApplicationDTO result = applicationService.publishApplication(applicationId);
 
 		// Assert the result
+		verify(applicationRepository).save(application);
 		assertEquals(StateEnum.PUBLISHED.name(), result.getState());
 	}
 
@@ -277,17 +303,30 @@ public class ApplicationServiceImplTest {
 	}
 
 	@Test
-	@Disabled
 	public void testDeleteApplication() {
 		// Define test data and expectations
 		Long applicationId = 1L;
 		Application application = new Application();
+		application.setId(applicationId);
+		application.setTitle("TestTitle");
+		application.setDescription("TestDescription");
 		application.setState(new State(StateEnum.CREATED));
-
 		when(applicationRepository.findById(applicationId)).thenReturn(Optional.of(application));
 
+		State expectedState = new State(StateEnum.DELETED);
+		when(stateRepository.findById(StateEnum.DELETED.getId())).thenReturn(Optional.of(expectedState));
+		when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
+			Application savedApplication = invocation.getArgument(0);
+			savedApplication.setState(expectedState);
+			return savedApplication;
+		});
+
 		// Call the service method
-		applicationService.deleteApplication(applicationId, "Reason for deletion");
+		applicationService.deleteApplication(applicationId, "Test");
+
+		// Assert that the application's state has been set to DELETED
+		verify(applicationRepository).save(application);
+		assertEquals(StateEnum.DELETED.name(), application.getState().getName());
 	}
 
 	@Test
@@ -323,20 +362,30 @@ public class ApplicationServiceImplTest {
 	}
 
 	@Test
-	@Disabled
 	public void testRejectApplication() {
 		// Define test data and expectations
 		Long applicationId = 1L;
 		Application application = new Application();
-		application.setState(new State(StateEnum.VERIFIED));
-
+		application.setId(applicationId);
+		application.setTitle("TestTitle");
+		application.setDescription("TestDescription");
+		application.setState(new State(StateEnum.ACCEPTED));
 		when(applicationRepository.findById(applicationId)).thenReturn(Optional.of(application));
 
-		// Call the service method
-		ApplicationDTO result = applicationService.rejectApplication(applicationId, "Reason for rejection");
+		State expectedState = new State(StateEnum.REJECTED);
+		when(stateRepository.findById(StateEnum.REJECTED.getId())).thenReturn(Optional.of(expectedState));
+		when(applicationRepository.save(any(Application.class))).thenAnswer(invocation -> {
+			Application savedApplication = invocation.getArgument(0);
+			savedApplication.setState(expectedState);
+			return savedApplication;
+		});
 
-		// Assert the result
-		assertEquals(StateEnum.REJECTED.name(), result.getState());
+		// Call the service method
+		applicationService.rejectApplication(applicationId, "Test");
+
+		// Assert that the application's state has been set to DELETED
+		verify(applicationRepository).save(application);
+		assertEquals(StateEnum.REJECTED.name(), application.getState().getName());
 	}
 
 	@Test
